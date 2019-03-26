@@ -21,5 +21,4 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('guest/',views.index),
-    path('article/',include('article.urls'))
 ]
