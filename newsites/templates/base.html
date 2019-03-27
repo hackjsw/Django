@@ -7,8 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'base.css' %}">
-
     <link rel="stylesheet" href="{% static 'bootstrap-3.3.7/css/bootstrap.min.css' %}">
+    {% block header_extends %}
+    {% endblock %}
 </head>
 <body>
     <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -29,7 +30,8 @@
             </div>
         </div>
     </div>
-{% block content %}{% endblock %}
+{% block content %}
+{% endblock %}
 
     <script type="text/javascript" src="{% static 'bootstrap-3.3.7/js/jquery-1.12.4.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'bootstrap-3.3.7/js/bootstrap.min.js' %}"></script>
