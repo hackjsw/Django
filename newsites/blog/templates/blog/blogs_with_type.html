@@ -5,7 +5,6 @@
 {% endblock %}
 
 {% block blog_list_title %}
-    {{ blog_type.type_name }}一共有{{ blogs|length }}篇博客
+    {{ blog_type.type_name }}中有{{ blogs_all_list|length }}篇博客
     <a href="{% url 'blog_list' %}">查看全部博客</a>
 {% endblock %}
-
