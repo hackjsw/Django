@@ -1,11 +1,12 @@
-from django.shortcuts import render_to_response, get_object_or_404,render
+from django.shortcuts import render_to_response, get_object_or_404, render
 from .models import Blog, BlogType
 from django.core.paginator import Paginator
 from django.conf import settings
+from django.db.models import Count
 
 
 # Create your views here.
-def blog_list_common_data(request,blogs_all_list):
+def blog_list_common_data(request, blogs_all_list):
     paginator = Paginator(blogs_all_list, settings.EACH_PAGE_OF_BLOGS)  # 每10篇进行分页
     page_num = request.GET.get('page', 1)  # 获取页码参数(GET请求)
     page_of_blogs = paginator.get_page(page_num)
@@ -23,43 +24,66 @@ def blog_list_common_data(request,blogs_all_list):
     if page_range[-1] != paginator.num_pages:
         page_range.append(paginator.num_pages)
 
+    # 获取日期归档对应的博客数量
+    blog_dates = Blog.objects.dates('created_time', 'month', order='DESC')
+    # 统计日期归类方法1
+    blog_dates_dict = {}
+    for blog_date in blog_dates:
+        blog_count = Blog.objects.filter(created_time__year=blog_date.year,
+                                         created_time__month=blog_date.month).count()
+        blog_dates_dict[blog_date] = blog_count
+    '''
+    # 获取博客分类的对应数量.方法1
+    blog_types = BlogType.objects.all()
+    #blog_types_list = []
+    for blog_type in blog_types:
+        blog_type.blog_count = Blog.objects.filter(blog_type=blog_type).count()
+        #blog_types_list.append(blog_type)
+    '''
     context = {
         'blogs': page_of_blogs.object_list,
         'page_of_blogs': page_of_blogs,
-        'blog_types': BlogType.objects.all(),
+        'blog_types': BlogType.objects.annotate(blog_count=Count('blog')),
         'page_range': page_range,
-        'blogs_all_list': blogs_all_list,
-        'blog_dates': Blog.objects.dates('created_time', 'month', order='DESC'),
+        'blog_dates': blog_dates_dict,
     }
 
     return context
 
+
 def blog_list(request):
     blogs_all_list = Blog.objects.all()
-    context = blog_list_common_data(request,blogs_all_list)
-    # 另外一个统计数量的方法
-    # context['blogs_count'] = Blog.objects.all().count()
-    return render(request,'blog/blog_list.html', context)
+    context = blog_list_common_data(request, blogs_all_list)
+    return render(request, 'blog/blog_list.html', context)
+
 
 def blog_detail(request, blog_pk):
     blog = get_object_or_404(Blog, pk=blog_pk)
+    if not request.COOKIES.get('blog_%s_readed' % blog_pk):
+        blog.readed_num += 1
+        blog.save()
+
     context = {
         'previous_blog': Blog.objects.filter(created_time__gt=blog.created_time).last(),
         'next_blog': Blog.objects.filter(created_time__lt=blog.created_time).first(),
         'blog': blog,
-
     }
-    return render(request,'blog/blog_detail.html', context)
+    response = render(request, 'blog/blog_detail.html', context)
+    response.set_cookie('blog_%s_readed' % blog_pk, 'true', max_age=60)
+    return response
+
 
 def blogs_with_type(request, blog_type_pk):
     blog_type = get_object_or_404(BlogType, pk=blog_type_pk)
     blogs_all_list = Blog.objects.filter(blog_type=blog_type)
-    context = blog_list_common_data(request,blogs_all_list)
+    context = blog_list_common_data(request, blogs_all_list)
     context['blog_type'] = blog_type
-    return render(request,'blog/blogs_with_type.html', context)
+    context['blogs_all_list'] = blogs_all_list
+    return render(request, 'blog/blogs_with_type.html', context)
+
 
 def blogs_with_date(request, year, month):
     blogs_all_list = Blog.objects.filter(created_time__year=year, created_time__month=month)
-    context = blog_list_common_data(request,blogs_all_list)
+    context = blog_list_common_data(request, blogs_all_list)
     context['blogs_with_date'] = "{0}年{1}月".format(year, month)
-    return render(request,'blog/blogs_with_date.html', context)
+    return render(request, 'blog/blogs_with_date.html', context)
